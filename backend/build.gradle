@@ -1,69 +1,88 @@
 plugins {
-	id 'java'
-	id 'war'
 	id 'org.springframework.boot' version '2.6.2'
 	id 'io.spring.dependency-management' version '1.1.7'
+	id 'java'
+	// id 'war'   // WAR 필요 없으면 주석
+	id "com.github.node-gradle.node" version "3.5.1"
 }
 
-group = 'com.example'
-version = '0.0.1-SNAPSHOT'
-description = 'Demo project for Spring Boot'
+java { toolchain { languageVersion = JavaLanguageVersion.of(8) } }
 
-java {
-	toolchain {
-		languageVersion = JavaLanguageVersion.of(8)
-	}
-}
-
-configurations {
-	compileOnly {
-		extendsFrom annotationProcessor
-	}
-}
-
-repositories {
-	mavenCentral()
-}
+repositories { mavenCentral() }
 
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
-	compileOnly 'org.projectlombok:lombok'
-	developmentOnly 'org.springframework.boot:spring-boot-devtools'
-	runtimeOnly 'com.h2database:h2'
-	annotationProcessor 'org.projectlombok:lombok'
-	providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-}
 
-tasks.named('test') {
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+
+	implementation 'org.jsoup:jsoup:1.17.2'
+	implementation 'org.json:json:20231013'
+
+	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
+	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+test {
 	useJUnitPlatform()
 }
-def frontendDir = "${projectDir}/frontend"
-def isWindows = System.getProperty("os.name").toLowerCase().contains("windows")
+def frontendDir = file("${projectDir}/../frontend")
 
-task installFrontend(type: Exec) {
-	workingDir frontendDir
-	commandLine isWindows ? ["cmd", "/c", "npm", "install"] : ["npm", "install"]
-	standardOutput = System.out
-	errorOutput    = System.err
+node {
+	download = true
+	version = "16.20.2"
+	npmVersion = "8.19.4"
+	nodeProjectDir = frontendDir
 }
 
-task buildFrontend(type: Exec) {
-	dependsOn installFrontend
-	workingDir frontendDir
-	commandLine isWindows ? ["cmd", "/c", "npm", "run", "build"] : ["npm", "run", "build"]
-	standardOutput = System.out
-	errorOutput    = System.err
+// npm run build
+tasks.register("frontendBuild", com.github.gradle.node.npm.task.NpmTask) {
+	dependsOn tasks.npmInstall
+	args = ["run", "build"]
+	workingDir = frontendDir
 }
 
-task copyFrontend(type: Copy) {
-	dependsOn buildFrontend
-	from("${frontendDir}/build")
+// 정적 리소스 분리 복사
+tasks.register("cleanFrontend", Delete) {
+	delete file("${projectDir}/src/main/resources/static/index.html")
+	delete file("${projectDir}/src/main/resources/static/asset-manifest.json")
+	delete file("${projectDir}/src/main/resources/static/favicon.ico")
+	delete file("${projectDir}/src/main/resources/static/manifest.json")
+	delete file("${projectDir}/src/main/resources/static/robots.txt")
+	delete file("${projectDir}/src/main/resources/static/css")
+	delete file("${projectDir}/src/main/resources/static/js")
+	delete file("${projectDir}/src/main/resources/static/media")
+}
+
+tasks.register("copyFrontendHtml", Copy) {
+	dependsOn("frontendBuild")
+	from("${frontendDir}/build") {
+		include "index.html", "asset-manifest.json", "favicon.ico", "manifest.json", "robots.txt"
+	}
 	into("${projectDir}/src/main/resources/static")
+}
+tasks.register("copyFrontendCss", Copy) {
+	dependsOn("frontendBuild")
+	from("${frontendDir}/build/static/css")
+	into("${projectDir}/src/main/resources/static/css")
+}
+tasks.register("copyFrontendJs", Copy) {
+	dependsOn("frontendBuild")
+	from("${frontendDir}/build/static/js")
+	into("${projectDir}/src/main/resources/static/js")
+}
+tasks.register("copyFrontendMedia", Copy) {
+	dependsOn("frontendBuild")
+	onlyIf { file("${frontendDir}/build/static/media").exists() }
+	from("${frontendDir}/build/static/media")
+	into("${projectDir}/src/main/resources/static/media")
+}
+
+tasks.register("assembleFrontend") {
+	dependsOn("cleanFrontend", "copyFrontendHtml", "copyFrontendCss", "copyFrontendJs", "copyFrontendMedia")
 }
 
 tasks.named("processResources") {
-	dependsOn(copyFrontend)
+	dependsOn("assembleFrontend")
 }
+
