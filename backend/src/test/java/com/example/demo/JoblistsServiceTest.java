@@ -3,6 +3,7 @@ package com.example.demo;
 import com.example.demo.dto.JobListsDto;
 import com.example.demo.entity.JobLists;
 import com.example.demo.repository.JabListRepository;
+import com.example.demo.service.CrawlingService;
 import com.example.demo.service.JobListsService;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONException;
@@ -18,14 +19,14 @@ import java.util.stream.Collectors;
 class JobListsServiceTest {
 
     @Autowired
-    private JobListsService jobListsService;
+    private CrawlingService crawlingService;
 
     @Autowired
     private JabListRepository jabListRepository;
 
     @Test
     void jobListsService() throws IOException, JSONException {
-        List<JobListsDto> jobs = jobListsService.getJobs();
+        List<JobListsDto> jobs = crawlingService.getJobs();
 
         if (jobs == null || jobs.isEmpty()) {
             log.info("데이터 없음");

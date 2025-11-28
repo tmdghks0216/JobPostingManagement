@@ -1,15 +1,15 @@
 package com.example.demo.controller;
 
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
-public class pageController {
+public class PageController {
 
-    @RequestMapping("/")
-    public String mainPage() {
-        return "";
+    @GetMapping("/")
+    public String index() {
+        return "forward:/index.html";
     }
 }
-

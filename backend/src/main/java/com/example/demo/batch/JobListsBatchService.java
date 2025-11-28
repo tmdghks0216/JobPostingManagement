@@ -4,6 +4,7 @@ package com.example.demo.batch;
 import com.example.demo.dto.JobListsDto;
 import com.example.demo.entity.JobLists;
 import com.example.demo.repository.JabListRepository;
+import com.example.demo.service.CrawlingService;
 import com.example.demo.service.JobListsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +22,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class JobListsBatchService {
 
-    private final JobListsService jobListsService;
+    private final CrawlingService crawlingService;
     private final JabListRepository jabListRepository;
 
     @Scheduled(cron = "0 5 0 * * *")
@@ -29,7 +30,7 @@ public class JobListsBatchService {
     public void JobCrawlerBatch() throws IOException {
         log.info("===== 채용공고 배치 시작 =====");
 
-        List<JobListsDto> dtos = jobListsService.getJobs();
+        List<JobListsDto> dtos = crawlingService.getJobs();
 
         if (dtos.isEmpty()) {
             log.info("오늘 신규 공고 없음 → 저장 스킵");

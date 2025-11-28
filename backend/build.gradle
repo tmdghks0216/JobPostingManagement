@@ -31,7 +31,10 @@ dependencies {
 test {
 	useJUnitPlatform()
 }
+
+
 def frontendDir = file("${projectDir}/../frontend")
+def staticDir   = file("${projectDir}/src/main/resources/static")
 
 node {
 	download = true
@@ -40,54 +43,28 @@ node {
 	nodeProjectDir = frontendDir
 }
 
-// npm run build
-tasks.register("frontendBuild", com.github.gradle.node.npm.task.NpmTask) {
-	dependsOn tasks.npmInstall
-	args = ["run", "build"]
+// npm run build 실행
+tasks.register("npmBuild", NpmTask) {
+	dependsOn("npmInstall")    // 플러그인 기본 제공
+	args = ['run', 'build']
 	workingDir = frontendDir
 }
 
-// 정적 리소스 분리 복사
-tasks.register("cleanFrontend", Delete) {
-	delete file("${projectDir}/src/main/resources/static/index.html")
-	delete file("${projectDir}/src/main/resources/static/asset-manifest.json")
-	delete file("${projectDir}/src/main/resources/static/favicon.ico")
-	delete file("${projectDir}/src/main/resources/static/manifest.json")
-	delete file("${projectDir}/src/main/resources/static/robots.txt")
-	delete file("${projectDir}/src/main/resources/static/css")
-	delete file("${projectDir}/src/main/resources/static/js")
-	delete file("${projectDir}/src/main/resources/static/media")
+// static 폴더 통째로 삭제
+tasks.register("cleanStatic", Delete) {
+	delete staticDir
 }
 
-tasks.register("copyFrontendHtml", Copy) {
-	dependsOn("frontendBuild")
-	from("${frontendDir}/build") {
-		include "index.html", "asset-manifest.json", "favicon.ico", "manifest.json", "robots.txt"
-	}
-	into("${projectDir}/src/main/resources/static")
-}
-tasks.register("copyFrontendCss", Copy) {
-	dependsOn("frontendBuild")
-	from("${frontendDir}/build/static/css")
-	into("${projectDir}/src/main/resources/static/css")
-}
-tasks.register("copyFrontendJs", Copy) {
-	dependsOn("frontendBuild")
-	from("${frontendDir}/build/static/js")
-	into("${projectDir}/src/main/resources/static/js")
-}
-tasks.register("copyFrontendMedia", Copy) {
-	dependsOn("frontendBuild")
-	onlyIf { file("${frontendDir}/build/static/media").exists() }
-	from("${frontendDir}/build/static/media")
-	into("${projectDir}/src/main/resources/static/media")
+// frontend/build 를 static/ 으로 복사
+tasks.register("copyFrontend", Copy) {
+	dependsOn("npmBuild")
+	from("${frontendDir}/build")
+	into(staticDir)
+
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
-tasks.register("assembleFrontend") {
-	dependsOn("cleanFrontend", "copyFrontendHtml", "copyFrontendCss", "copyFrontendJs", "copyFrontendMedia")
-}
-
+// processResources 이전에 실행
 tasks.named("processResources") {
-	dependsOn("assembleFrontend")
+	dependsOn("cleanStatic", "copyFrontend")
 }
-
