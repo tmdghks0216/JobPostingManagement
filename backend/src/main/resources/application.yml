@@ -6,8 +6,12 @@ spring:
     name: Job-posting-management
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     show-sql: true
+  datasource:
+    url: jdbc:mysql://localhost:3306/demo
+    username: root
+    password: root
 
 logging:
   level:

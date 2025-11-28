@@ -1,7 +1,7 @@
 package com.example.demo.service;
 
 import com.example.demo.code.JobCodeEnum;
-import com.example.demo.dto.JoblistsDto;
+import com.example.demo.dto.JobListsDto;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -21,8 +21,8 @@ import java.util.regex.Pattern;
 @Slf4j
 @Service
 public class JobListsService {
-    public List<JoblistsDto> getJobs() throws IOException, JSONException {
-        List<JoblistsDto> jobs = new ArrayList<>();
+    public List<JobListsDto> getJobs() throws IOException, JSONException {
+        List<JobListsDto> jobs = new ArrayList<>();
 
         log.info(">>>>>> 크롤링 시작");
 
@@ -41,19 +41,17 @@ public class JobListsService {
                     + "&count=100";
 
             Connection.Response response = Jsoup.connect(url)
-                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                            + "AppleWebKit/537.36 (KHTML, like Gecko) "
-                            + "Chrome/120.0.0.0 Safari/537.36")
+                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) ")
                     .header("Accept", "application/json, text/javascript, */*; q=0.01")
                     .header("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8")
                     .header("X-Requested-With", "XMLHttpRequest")
                     .referrer("https://www.saramin.co.kr")
-                    .ignoreContentType(true)
                     .timeout(10000)
                     .method(Connection.Method.GET)
                     .execute();
 
             String body = response.body();
+            log.info("url: {}", url);
 
             // JSON 파싱
             JSONObject json = new JSONObject(body);
@@ -89,6 +87,7 @@ public class JobListsService {
                 String deadlineText = jobElement.select(".col.support_info .support_detail .deadlines").text();
 
                 if (!isRegisteredToday(deadlineText)) {
+                    log.info(">>>마지막 공고 {} 등록일자 {}",company,deadlineText);
                     log.info(">> 24시간 이전 공고 없음");
                     stopForThisJobCode = true;
                     break;
@@ -96,17 +95,18 @@ public class JobListsService {
 
                 String detailLink = jobElement.select(".job_tit a").attr("href");
                 if (!detailLink.startsWith("http")) {
-                    detailLink = "https://www.saramin.co.kr" + detailLink;
+                    detailLink = "https://www.saramin.co.kr" + url;
                 }
 
-                JoblistsDto job = new JoblistsDto(
-                        title,
-                        company,
-                        location,
-                        endDateText,
-                        detailLink,
-                        jabCode.getCode()
-                );
+                JobListsDto job = JobListsDto.builder()
+                        .title(title)
+                        .company(company)
+                        .location(location)
+                        .endDate(endDateText)
+                        .detailLink(detailLink)
+                        .date(deadlineText)
+                        .jobCode(jabCode.getCode())
+                        .build();
 
                 jobs.add(job);
                 }

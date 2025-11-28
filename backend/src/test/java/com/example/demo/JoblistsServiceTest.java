@@ -1,30 +1,41 @@
 package com.example.demo;
 
-import com.example.demo.dto.JoblistsDto;
+import com.example.demo.dto.JobListsDto;
+import com.example.demo.entity.JobLists;
+import com.example.demo.repository.JabListRepository;
 import com.example.demo.service.JobListsService;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.AutoConfigureOrder;
 import org.springframework.boot.test.context.SpringBootTest;
 import java.io.IOException;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import java.util.stream.Collectors;
 
 @Slf4j
 @SpringBootTest
-class JoblistsServiceTest {
+class JobListsServiceTest {
 
     @Autowired
     private JobListsService jobListsService;
 
-    @Test
-    void joblistsService() throws IOException, JSONException {
-        List<JoblistsDto> jobs = jobListsService.getJobs();
+    @Autowired
+    private JabListRepository jabListRepository;
 
-        // 3) 로그 출력
-        jobs.forEach(job -> log.info("{}", job));
+    @Test
+    void jobListsService() throws IOException, JSONException {
+        List<JobListsDto> jobs = jobListsService.getJobs();
+
+        if (jobs == null || jobs.isEmpty()) {
+            log.info("데이터 없음");
+            return;
+        }
+
+        List<JobLists> entities = jobs.stream()
+                .map(JobLists::from)
+                .collect(Collectors.toList());
+
+        jabListRepository.saveAll(entities);
     }
 }
